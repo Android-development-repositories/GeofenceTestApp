@@ -77,6 +77,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return;
         }
         map.setMyLocationEnabled(locationPermissionGranted);
+        mapsViewModel.setLocationEnabled(locationPermissionGranted);
         map.getUiSettings().setMyLocationButtonEnabled(locationPermissionGranted);
     }
 }
