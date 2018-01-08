@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <variable
+            name="viewModel"
+            type="widelab.ua.geofencetestapp.MapsViewModel" />
+    </data>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:id="@+id/currentStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:text="@{viewModel.currentStatus}"
+            tools:text="Enabled" />
+
+        <EditText
+            android:id="@+id/wifi_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_above="@id/currentStatus"
+            android:enabled="@{viewModel.viewEnabled}"
+            android:hint="@string/wifi_name_hint"
+            android:text="@={viewModel.wifiName}" />
+
+        <Switch
+            android:id="@+id/geofence_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@id/wifi_name"
+            android:layout_centerHorizontal="true"
+            android:enabled="@{viewModel.viewEnabled}"
+            android:text="@string/geofence_usage_text" />
+
+        <fragment
+            android:id="@+id/map"
+            android:name="com.google.android.gms.maps.SupportMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@id/geofence_switch"
+            tools:context="widelab.ua.geofencetestapp.MapsActivity" />
+    </RelativeLayout>
+</layout>
