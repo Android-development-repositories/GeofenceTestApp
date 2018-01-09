@@ -2,17 +2,24 @@ package widelab.ua.geofencetestapp;
 
 import android.annotation.SuppressLint;
 import android.arch.lifecycle.ViewModelProviders;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.databinding.DataBindingUtil;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CircleOptions;
 
 import widelab.ua.geofencetestapp.databinding.ActivityMapsBinding;
 
@@ -35,11 +42,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        mapsViewModel.getAreaChangeEvent().observe(this, area -> {
+            if ((map != null) && (area != null)) {
+                map.clear();
+                map.addCircle(new CircleOptions().center(area.getCenter()).radius(area.getRadius()));
+            }
+        });
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
+        map.setOnMapClickListener(latLng -> mapsViewModel.onMapClick(latLng));
         mapsViewModel.mapReady();
         getLocationPermission();
         updateLocationUI();
@@ -79,5 +94,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setMyLocationEnabled(locationPermissionGranted);
         mapsViewModel.setLocationEnabled(locationPermissionGranted);
         map.getUiSettings().setMyLocationButtonEnabled(locationPermissionGranted);
+        if (locationPermissionGranted) {
+            map.setOnMyLocationButtonClickListener(() -> {
+                LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+                if (locationManager == null) {
+                    return false;
+                }
+                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    return false;
+                }
+                showEnableLocationDialog();
+                return true;
+            });
+        } else {
+            map.setOnMyLocationButtonClickListener(null);
+        }
+    }
+
+    private void showEnableLocationDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        builder.setMessage(R.string.enable_gps_text)
+                .setPositiveButton(android.R.string.ok,
+                        (dialog, id) -> {
+                            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                            startActivity(intent);
+                        })
+                .setNegativeButton(android.R.string.cancel, null);
+        builder.create().show();
     }
 }

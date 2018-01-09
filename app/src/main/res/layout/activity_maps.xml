@@ -13,39 +13,45 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <TextView
-            android:id="@+id/currentStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_centerHorizontal="true"
-            android:text="@{viewModel.currentStatus}"
-            tools:text="Enabled" />
-
         <EditText
             android:id="@+id/wifi_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_above="@id/currentStatus"
-            android:enabled="@{viewModel.viewEnabled}"
-            android:hint="@string/wifi_name_hint"
-            android:text="@={viewModel.wifiName}" />
-
-        <Switch
-            android:id="@+id/geofence_switch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_above="@id/wifi_name"
+            android:layout_alignParentBottom="true"
             android:layout_centerHorizontal="true"
             android:enabled="@{viewModel.viewEnabled}"
-            android:text="@string/geofence_usage_text" />
+            android:hint="@string/wifi_name_hint"
+            android:maxLines="1"
+            android:text="@={viewModel.wifiName}" />
+
+        <EditText
+            android:id="@+id/radius"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_above="@id/wifi_name"
+            android:digits="0123456789."
+            android:enabled="@{viewModel.viewEnabled}"
+            android:hint="@string/radius_input_hint"
+            android:inputType="number"
+            android:maxLength="10"
+            android:maxLines="1"
+            android:text="@={viewModel.radius}" />
+
+        <TextView
+            android:id="@+id/currentStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@id/radius"
+            android:layout_centerHorizontal="true"
+            android:text="@{viewModel.currentStatus}"
+            tools:text="Inside" />
 
         <fragment
             android:id="@+id/map"
             android:name="com.google.android.gms.maps.SupportMapFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_above="@id/geofence_switch"
+            android:layout_above="@id/currentStatus"
             tools:context="widelab.ua.geofencetestapp.MapsActivity" />
     </RelativeLayout>
 </layout>

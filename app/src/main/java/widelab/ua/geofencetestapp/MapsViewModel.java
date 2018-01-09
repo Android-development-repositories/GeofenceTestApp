@@ -12,10 +12,12 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import android.support.annotation.NonNull;
+import android.text.TextUtils;
 
 import com.github.pwittchen.reactivenetwork.library.rx2.ConnectivityPredicate;
 import com.github.pwittchen.reactivenetwork.library.rx2.ReactiveNetwork;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.maps.model.LatLng;
 
 import java.util.concurrent.TimeUnit;
 
@@ -28,26 +30,32 @@ import pl.charmas.android.reactivelocation2.ReactiveLocationProvider;
 
 public class MapsViewModel extends AndroidViewModel {
 
-    // TODO: 08.01.18 get current position
-    // TODO: 08.01.18 two implementations of position check
+    private final static int DEBOUNCE = 100;
 
     public ObservableBoolean viewEnabled = new ObservableBoolean(false);
     public ObservableField<String> wifiName = new ObservableField<>();
+    public ObservableField<String> radius = new ObservableField<>(Float.toString(Area.DEFAULT_RADIUS));
     public ObservableField<String> currentStatus = new ObservableField<>();
 
-    private MutableLiveData<Location> locationChangeEvent = new MutableLiveData<>();
+    private MutableLiveData<Area> areaChangeEvent = new MutableLiveData<>();
 
     private CompositeDisposable compositeDisposable = new CompositeDisposable();
 
     private BehaviorSubject<Boolean> locationEnabled = BehaviorSubject.create();
 
+    private Area area;
+
     public MapsViewModel(@NonNull Application application) {
         super(application);
-        compositeDisposable.add(Observable.combineLatest(getWifiNameObservable(), getNetworkConnectivityObservable(), getLocationObservable(),
-                (s, s2, location) -> s.equalsIgnoreCase(s2))
+        area = new Area();
+        compositeDisposable.add(Observable.combineLatest(getWifiNameObservable(), getNetworkConnectivityObservable(), getLocationObservable(), getAreaObservable(),
+                (inputName, networkName, location, areaCheck) -> (!TextUtils.isEmpty(inputName) && inputName.equalsIgnoreCase(networkName)) || areaCheck.isLocationInArea(location))
                 .observeOn(AndroidSchedulers.mainThread())
-                .distinct()
                 .subscribe(this::setCurrentStatus, Throwable::printStackTrace));
+        compositeDisposable.add(RxUtils.toObservable(radius)
+                .filter(radius -> radius.matches("\\d+\\.?\\d*"))
+                .map(Float::parseFloat)
+                .subscribe(radius -> area.setRadius(radius)));
     }
 
     private void setCurrentStatus(boolean inside) {
@@ -61,7 +69,8 @@ public class MapsViewModel extends AndroidViewModel {
 
     private Observable<String> getWifiNameObservable() {
         return RxUtils.toObservable(wifiName)
-                .debounce(100, TimeUnit.MILLISECONDS)
+                .startWith("")
+                .debounce(DEBOUNCE, TimeUnit.MILLISECONDS)
                 .map(String::trim);
     }
 
@@ -72,9 +81,14 @@ public class MapsViewModel extends AndroidViewModel {
         }
         return ReactiveNetwork.observeNetworkConnectivity(getApplication())
                 .subscribeOn(Schedulers.io())
-                .filter(ConnectivityPredicate.hasState(NetworkInfo.State.CONNECTED))
                 .filter(ConnectivityPredicate.hasType(ConnectivityManager.TYPE_WIFI))
-                .map(__ -> wifiManager.getConnectionInfo().getSSID().replace("\"", "").trim());
+                .map(connectivity -> {
+                    if (connectivity.getState() == NetworkInfo.State.CONNECTED) {
+                        return wifiManager.getConnectionInfo().getSSID().replace("\"", "").trim();
+                    } else {
+                        return "";
+                    }
+                });
     }
 
     @SuppressLint("MissingPermission")
@@ -89,18 +103,36 @@ public class MapsViewModel extends AndroidViewModel {
                     } else {
                         return Observable.empty();
                     }
+                })
+                .startWith(Observable.just(new Location(AreaCheck.EXCLUDE_PROVIDER)));
+    }
+
+    private Observable<AreaCheck> getAreaObservable() {
+        return area.getChangedAreaObservable()
+                .doOnNext(__ -> {
+                    if (area.getCenter() != null) {
+                        areaChangeEvent.postValue(this.area);
+                    }
                 });
+
     }
 
     void mapReady() {
         viewEnabled.set(true);
     }
 
-
     @Override
     protected void onCleared() {
         super.onCleared();
         locationEnabled.onComplete();
         compositeDisposable.dispose();
+    }
+
+    void onMapClick(LatLng latLng) {
+        area.setCenter(latLng);
+    }
+
+    MutableLiveData<Area> getAreaChangeEvent() {
+        return areaChangeEvent;
     }
 }
